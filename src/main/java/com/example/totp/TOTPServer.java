@@ -234,8 +234,20 @@ public class TOTPServer {
                 path = "/index.html";
             }
             
-            // 构建文件路径
-            Path filePath = Paths.get("src/main/resources/static" + path);
+            // 处理根路径下的文件访问
+            if (path.startsWith("/")) {
+                path = path.substring(1);
+            }
+            
+            // 构建文件路径 - 使用绝对路径
+            Path baseDir = Paths.get("src", "main", "resources", "static");
+            Path filePath = baseDir.resolve(path).normalize();
+            
+            // 安全检查：确保文件路径在baseDir内
+            if (!filePath.startsWith(baseDir)) {
+                sendResponse(exchange, 403, "Access Denied");
+                return;
+            }
             
             // 检查文件是否存在
             if (Files.exists(filePath) && !Files.isDirectory(filePath)) {
@@ -243,12 +255,28 @@ public class TOTPServer {
                 String contentType = getContentType(filePath.toString());
                 exchange.getResponseHeaders().set("Content-Type", contentType);
                 
+                // 设置缓存控制头，避免浏览器缓存问题
+                exchange.getResponseHeaders().set("Cache-Control", "no-cache, no-store, must-revalidate");
+                exchange.getResponseHeaders().set("Pragma", "no-cache");
+                exchange.getResponseHeaders().set("Expires", "0");
+                
+                // 设置CORS头，允许跨域访问
+                exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+                
                 // 发送文件内容
-                exchange.sendResponseHeaders(200, Files.size(filePath));
-                Files.copy(filePath, exchange.getResponseBody());
+                byte[] fileBytes = Files.readAllBytes(filePath);
+                exchange.sendResponseHeaders(200, fileBytes.length);
+                
+                try (OutputStream os = exchange.getResponseBody()) {
+                    os.write(fileBytes);
+                }
+                
+                System.out.println("成功加载静态文件: " + path);
             } else {
                 // 文件不存在，返回404
-                sendResponse(exchange, 404, "File Not Found");
+                System.out.println("文件不存在: " + filePath);
+                sendResponse(exchange, 404, "File Not Found: " + path);
             }
         }
         
@@ -256,12 +284,12 @@ public class TOTPServer {
          * 根据文件扩展名获取Content-Type
          */
         private String getContentType(String filename) {
-            if (filename.endsWith(".html")) return "text/html";
-            if (filename.endsWith(".css")) return "text/css";
-            if (filename.endsWith(".js")) return "application/javascript";
+            if (filename.endsWith(".html")) return "text/html; charset=UTF-8";
+            if (filename.endsWith(".css")) return "text/css; charset=UTF-8";
+            if (filename.endsWith(".js")) return "application/javascript; charset=UTF-8";
             if (filename.endsWith(".png")) return "image/png";
             if (filename.endsWith(".jpg") || filename.endsWith(".jpeg")) return "image/jpeg";
-            return "text/plain";
+            return "text/plain; charset=UTF-8";
         }
     }
     

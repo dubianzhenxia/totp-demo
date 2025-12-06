@@ -23,3 +23,101 @@ this.totpGenerator = new TimeBasedOneTimePasswordGenerator(
     6, 
     HmacSha256Algorithm.INSTANCE
 );
+
+
+
+
+￥￥￥￥￥￥￥￥￥￥￥￥￥￥￥￥￥￥￥￥￥￥￥￥￥￥￥￥￥￥￥￥￥￥￥
+
+## 已创建的文件列表：
+1. `OTPAuthenticator.java` - OTP验证器核心接口
+2. `OTPConfig.java` - OTP配置接口
+3. `OTPType.java` - OTP类型枚举（包含TOTP、HOTP、SMS_OTP等7种类型）
+4. `OTPManager.java` - OTP管理器（统一管理所有验证器）
+5. `OTPException.java` - 异常类文件（包含8种特定异常）
+## 架构特点：
+这个接口架构设计为高度可扩展的，支持：
+
+- 插件化架构 ：通过 `OTPManager.registerAuthenticator` 方法注册新的OTP验证器
+- 统一API ：所有验证器通过 `OTPAuthenticator` 接口提供一致的方法
+- 类型安全 ：使用 `OTPType` 枚举确保类型正确性
+- 错误处理 ：完善的异常体系支持各种错误场景
+## 扩展方式：
+要添加新的OTP验证方式，只需：
+
+1. 实现 `OTPAuthenticator` 接口
+2. 在 `OTPType` 中添加对应的枚举值
+3. 通过 `OTPManager.registerAuthenticator` 注册到管理器
+所有文件都已成功创建并放置在正确的目录结构中，您现在可以基于这个接口架构来扩展支持多种OTP验证方式了。
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+1. 核心接口设计
+OTP验证器接口
+Java
+
+
+
+public interface OTPAuthenticator {    /**     * 生成OTP配置     */    OTPConfig generateConfig(String userId,     Map<String, Object> params);        /**     * 验证OTP验证码     */    boolean verify(String userId, String     code, Map<String, Object> params);        /**     * 获取OTP类型     */    OTPType getType();        /**     * 是否支持该用户     */    boolean supports(String userId);}
+OTP配置接口
+Java
+
+
+
+public interface OTPConfig {    String getUserId();    OTPType getType();    Map<String, Object> getConfigData();    boolean isActive();    Date getCreatedAt();}
+2. OTP类型枚举
+Java
+
+
+
+public enum OTPType {    TOTP("时间型一次性密码"),    HOTP("计数器型一次性密码"),    SMS_OTP("短信验证码"),    EMAIL_OTP("邮件验证码"),    PUSH_OTP("推送验证码");        private final String description;        OTPType(String description) {        this.description = description;    }}
+3. 具体实现示例
+TOTP实现
+Java
+
+
+
+@Componentpublic class TOTPAuthenticator implements OTPAuthenticator {    @Override    public OTPConfig generateConfig(String     userId, Map<String, Object> params) {        String secretKey = generateSecretKey        ();        String accountName = (String)         params.getOrDefault("accountName",         userId);        String issuer = (String) params.        getOrDefault("issuer", "MyApp");                return new TOTPConfig(userId,         secretKey, accountName, issuer);    }        @Override    public boolean verify(String userId,     String code, Map<String, Object>     params) {        // TOTP验证逻辑        return verifyTOTPWithWindow        (getSecretKey(userId), code);    }        @Override    public OTPType getType() {        return OTPType.TOTP;    }}
+HOTP实现
+Java
+
+
+
+@Componentpublic class HOTPAuthenticator implements OTPAuthenticator {    @Override    public OTPConfig generateConfig(String     userId, Map<String, Object> params) {        String secretKey = generateSecretKey        ();        long initialCounter = 0L;        return new HOTPConfig(userId,         secretKey, initialCounter);    }        @Override    public boolean verify(String userId,     String code, Map<String, Object>     params) {        // HOTP验证逻辑（基于计数器）        return verifyHOTP(getSecretKey        (userId), code, getCurrentCounter        (userId));    }}
+4. OTP管理器（核心）
+Java
+
+
+
+@Servicepublic class OTPManager {    private final Map<OTPType,     OTPAuthenticator> authenticators = new     HashMap<>();        public void registerAuthenticator    (OTPAuthenticator authenticator) {        authenticators.put(authenticator.        getType(), authenticator);    }        public OTPConfig generateConfig(String     userId, OTPType type, Map<String,     Object> params) {        OTPAuthenticator authenticator =         authenticators.get(type);        if (authenticator == null) {            throw new             UnsupportedOTPTypeException("不            支持的OTP类型: " + type);        }        return authenticator.generateConfig        (userId, params);    }        public boolean verify(String userId,     String code, OTPType type, Map<String,     Object> params) {        OTPAuthenticator authenticator =         authenticators.get(type);        return authenticator != null &&         authenticator.verify(userId, code,         params);    }        public List<OTPType> getSupportedTypes    (String userId) {        return authenticators.values().        stream()            .filter(auth -> auth.supports            (userId))            .map(OTPAuthenticator::getType)            .collect(Collectors.toList());    }}
+5. 统一API接口设计
+生成配置接口
+http
+
+
+
+POST /api/otp/generateContent-Type: application/json{    "userId": "user123",    "type": "TOTP", // 或 "HOTP", "SMS"等    "params": {        "accountName": "张三",        "issuer": "公司名"    }}
+验证接口
+http
+
+
+
+POST /api/otp/verifyContent-Type: application/json{    "userId": "user123",    "type": "TOTP",    "code": "123456",    "params": {        "timeWindow": 30 // TOTP特有参数    }}
+6. 数据库设计扩展
+统一的OTP配置表
+SQL
+
+
+
+CREATE TABLE otp_config (    id BIGINT PRIMARY KEY,    user_id VARCHAR(64) NOT NULL,    otp_type ENUM('TOTP','HOTP','SMS',    'EMAIL','PUSH') NOT NULL,    config_data JSON NOT NULL, -- 存储不同类    型的具体配置    is_active BOOLEAN DEFAULT TRUE,    created_at TIMESTAMP DEFAULT     CURRENT_TIMESTAMP,    updated_at TIMESTAMP DEFAULT     CURRENT_TIMESTAMP ON UPDATE     CURRENT_TIMESTAMP,    UNIQUE KEY uk_user_type (user_id,     otp_type));
+7. 扩展性考虑
+插件化架构
+新的OTP类型可以通过实现OTPAuthenticator接口来添加
+使用Spring的@Component注解自动注册
+支持动态加载和卸载
+参数化设计
+每种OTP类型可以有自己特定的参数
+参数通过Map<String, Object>传递，保证灵活性
+策略模式
+用户可以选择使用哪种OTP方式
+支持多种OTP方式并存（主备方案）
+这样的设计可以轻松支持未来的OTP类型扩展，同时保持代码的整洁和可维护性。
