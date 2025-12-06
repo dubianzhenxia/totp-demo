@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TOTP验证程序Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .section {
+            margin-bottom: 40px;
+            padding: 30px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            background: #f8f9fa;
+        }
+        
+        .section h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+        }
+        
+        .btn-success {
+            background: #28a745;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+        }
+        
+        .qr-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .qr-code {
+            max-width: 300px;
+            height: auto;
+            border: 10px solid white;
+            border-radius: 10px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        
+        .info-box {
+            background: #e8f4fd;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        
+        .result-box {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-weight: 600;
+            text-align: center;
+        }
+        
+        .result-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .result-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .code-display {
+            font-family: 'Courier New', monospace;
+            font-size: 2em;
+            font-weight: bold;
+            color: #2c3e50;
+            text-align: center;
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border: 2px dashed #dee2e6;
+        }
+        
+        .config-info {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+            font-size: 0.9em;
+            border-top: 1px solid #dee2e6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 TOTP验证程序Demo</h1>
+            <p>基于时间的一次性密码验证系统</p>
+        </div>
+        
+        <div class="content">
+            <!-- 生成TOTP配置区域 -->
+            <div class="section">
+                <h2>1. 生成TOTP配置</h2>
+                <div class="form-group">
+                    <label for="accountName">账户名称：</label>
+                    <input type="text" id="accountName" placeholder="请输入账户名称（如：demo@example.com）" value="Demo User">
+                </div>
+                <div class="form-group">
+                    <label for="issuer">发行者：</label>
+                    <input type="text" id="issuer" placeholder="请输入应用名称" value="TOTP Demo App">
+                </div>
+                <button class="btn" onclick="generateTOTP()">生成TOTP配置</button>
+                
+                <div class="loading" id="generateLoading">
+                    <div class="spinner"></div>
+                    <p>正在生成TOTP配置...</p>
+                </div>
+                
+                <div id="configResult" class="hidden">
+                    <div class="info-box">
+                        <strong>📋 配置信息：</strong>
+                        <div class="config-info" id="configInfo"></div>
+                    </div>
+                    
+                    <div class="qr-container">
+                        <h3>📱 扫描二维码</h3>
+                        <p>使用Google Authenticator等应用扫描下方二维码</p>
+                        <img id="qrCodeImage" class="qr-code" src="" alt="TOTP二维码">
+                    </div>
+                    
+                    <div class="code-display">
+                        <span id="currentCode">000000</span>
+                    </div>
+                    <button class="btn btn-secondary" onclick="refreshCode()">🔄 刷新验证码</button>
+                </div>
+            </div>
+            
+            <!-- 验证TOTP区域 -->
+            <div class="section">
+                <h2>2. 验证TOTP验证码</h2>
+                <div class="form-group">
+                    <label for="verifyCode">请输入6位验证码：</label>
+                    <input type="text" id="verifyCode" placeholder="000000" maxlength="6">
+                </div>
+                <button class="btn btn-success" onclick="verifyTOTP()">✅ 验证验证码</button>
+                
+                <div class="loading" id="verifyLoading">
+                    <div class="spinner"></div>
+                    <p>正在验证...</p>
+                </div>
+                
+                <div id="verifyResult" class="hidden">
+                    <div class="result-box" id="verifyResultBox"></div>
+                </div>
+            </div>
+            
+            <!-- 使用说明区域 -->
+            <div class="section">
+                <h2>📖 使用说明</h2>
+                <div class="info-box">
+                    <strong>使用步骤：</strong>
+                    <ol style="margin-left: 20px; margin-top: 10px;">
+                        <li>点击"生成TOTP配置"按钮创建新的TOTP密钥</li>
+                        <li>使用手机上的TOTP应用（如Google Authenticator）扫描生成的二维码</li>
+                        <li>在验证区域输入手机应用显示的6位验证码</li>
+                        <li>点击"验证验证码"按钮进行验证</li>
+                    </ol>
+                </div>
+                
+                <div class="info-box">
+                    <strong>技术说明：</strong>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>TOTP（基于时间的一次性密码）使用HMAC-SHA1算法</li>
+                        <li>验证码每30秒自动更新一次</li>
+                        <li>支持前后一个时间窗口（±30秒）的验证容错</li>
+                        <li>密钥使用Base32编码存储</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>TOTP验证程序Demo - 基于Java实现 | 安全可靠的时间验证系统</p>
+        </div>
+    </div>
+    
+<!--    <script src="app.js"></script>-->
+    <script>
+        /**
+         * TOTP验证程序前端JavaScript
+         * 负责与后端API交互和页面逻辑处理
+         */
+
+// 当前配置信息
+        let currentConfig = null;
+
+        /**
+         * 生成TOTP配置
+         */
+        async function generateTOTP() {
+            const accountName = document.getElementById('accountName').value.trim();
+            const issuer = document.getElementById('issuer').value.trim();
+
+            if (!accountName || !issuer) {
+                alert('请输入账户名称和发行者');
+                return;
+            }
+
+            // 显示加载动画
+            showLoading('generateLoading');
+            hideElement('configResult');
+
+            try {
+                // 构建表单数据
+                const formData = new FormData();
+                formData.append('accountName', accountName);
+                formData.append('issuer', issuer);
+
+                // 发送API请求
+                const response = await fetch('/api/generate', {
+                    method: 'POST',
+                    body: new URLSearchParams({
+                        accountName: accountName,
+                        issuer: issuer
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // 保存配置信息
+                    currentConfig = result.data;
+
+                    // 更新页面显示
+                    updateConfigDisplay(result.data);
+                    showElement('configResult');
+
+                    // 自动刷新验证码
+                    refreshCode();
+
+                    console.log('TOTP配置生成成功:', result.data);
+                } else {
+                    throw new Error(result.message);
+                }
+
+            } catch (error) {
+                console.error('生成TOTP配置失败:', error);
+                alert('生成TOTP配置失败: ' + error.message);
+            } finally {
+                hideLoading('generateLoading');
+            }
+        }
+
+        /**
+         * 验证TOTP验证码
+         */
+        async function verifyTOTP() {
+            const verifyCode = document.getElementById('verifyCode').value.trim();
+
+            if (!verifyCode) {
+                alert('请输入验证码');
+                return;
+            }
+
+            if (!/^\d{6}$/.test(verifyCode)) {
+                alert('请输入6位数字验证码');
+                return;
+            }
+
+            if (!currentConfig) {
+                alert('请先生成TOTP配置');
+                return;
+            }
+
+            // 显示加载动画
+            showLoading('verifyLoading');
+            hideElement('verifyResult');
+
+            try {
+                // 发送验证请求
+                const response = await fetch('/api/verify', {
+                    method: 'POST',
+                    body: new URLSearchParams({
+                        code: verifyCode
+                    })
+                });
+
+                const result = await response.json();
+
+                // 更新验证结果显示
+                updateVerifyResult(result);
+                showElement('verifyResult');
+
+                console.log('验证结果:', result);
+
+            } catch (error) {
+                console.error('验证TOTP验证码失败:', error);
+                alert('验证失败: ' + error.message);
+            } finally {
+                hideLoading('verifyLoading');
+            }
+        }
+
+        /**
+         * 刷新当前验证码
+         */
+        async function refreshCode() {
+            if (!currentConfig) {
+                alert('请先生成TOTP配置');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/current-code');
+                const result = await response.json();
+
+                if (result.success) {
+                    // 更新验证码显示
+                    document.getElementById('currentCode').textContent = result.data.currentCode;
+
+                    // 更新当前配置中的验证码
+                    if (currentConfig) {
+                        currentConfig.currentCode = result.data.currentCode;
+                    }
+
+                    console.log('验证码已刷新:', result.data.currentCode);
+                } else {
+                    throw new Error(result.message);
+                }
+
+            } catch (error) {
+                console.error('刷新验证码失败:', error);
+                alert('刷新验证码失败: ' + error.message);
+            }
+        }
+
+        /**
+         * 更新配置信息显示
+         */
+        function updateConfigDisplay(configData) {
+            // 显示配置信息
+            document.getElementById('configInfo').textContent = configData.configInfo;
+
+            // 显示二维码
+            document.getElementById('qrCodeImage').src = configData.qrCodeImage;
+
+            // 显示当前验证码
+            document.getElementById('currentCode').textContent = configData.currentCode;
+        }
+
+        /**
+         * 更新验证结果显示
+         */
+        function updateVerifyResult(result) {
+            const resultBox = document.getElementById('verifyResultBox');
+
+            // 清空之前的样式和内容
+            resultBox.className = 'result-box';
+
+            if (result.success) {
+                if (result.data.isValid) {
+                    // 验证成功
+                    resultBox.className += ' result-success';
+                    resultBox.innerHTML = `
+                ✅ <strong>验证成功！</strong><br>
+                您输入的验证码 <strong>${result.data.userCode}</strong> 是正确的。<br>
+                <small>当前验证码: ${result.data.expectedCode}</small>
+            `;
+                } else {
+                    // 验证失败
+                    resultBox.className += ' result-error';
+                    resultBox.innerHTML = `
+                ❌ <strong>验证失败！</strong><br>
+                您输入的验证码 <strong>${result.data.userCode}</strong> 不正确。<br>
+                <small>当前验证码: ${result.data.expectedCode}</small>
+            `;
+                }
+            } else {
+                // API调用失败
+                resultBox.className += ' result-error';
+                resultBox.innerHTML = `
+            ⚠️ <strong>验证出错！</strong><br>
+            ${result.message}
+        `;
+            }
+        }
+
+        /**
+         * 显示加载动画
+         */
+        function showLoading(loadingId) {
+            document.getElementById(loadingId).style.display = 'block';
+        }
+
+        /**
+         * 隐藏加载动画
+         */
+        function hideLoading(loadingId) {
+            document.getElementById(loadingId).style.display = 'none';
+        }
+
+        /**
+         * 显示元素
+         */
+        function showElement(elementId) {
+            document.getElementById(elementId).classList.remove('hidden');
+        }
+
+        /**
+         * 隐藏元素
+         */
+        function hideElement(elementId) {
+            document.getElementById(elementId).classList.add('hidden');
+        }
+
+        /**
+         * 自动刷新验证码（每25秒刷新一次）
+         */
+        function startAutoRefresh() {
+            if (currentConfig) {
+                setInterval(refreshCode, 25000); // 25秒刷新一次
+            }
+        }
+
+        /**
+         * 输入框回车键支持
+         */
+        document.addEventListener('DOMContentLoaded', function() {
+            // 账户名称输入框回车触发生成
+            document.getElementById('accountName').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    generateTOTP();
+                }
+            });
+
+            // 发行者输入框回车触发生成
+            document.getElementById('issuer').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    generateTOTP();
+                }
+            });
+
+            // 验证码输入框回车触发验证
+            document.getElementById('verifyCode').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    verifyTOTP();
+                }
+            });
+
+            // 限制验证码输入为数字
+            document.getElementById('verifyCode').addEventListener('input', function(e) {
+                this.value = this.value.replace(/[^0-9]/g, '');
+                if (this.value.length > 6) {
+                    this.value = this.value.slice(0, 6);
+                }
+            });
+
+            // 页面加载完成后自动生成一个默认配置
+            setTimeout(() => {
+                if (!currentConfig) {
+                    console.log('页面加载完成，准备生成默认TOTP配置...');
+                    // 可以取消注释下面的行来自动生成配置
+                    // generateTOTP();
+                }
+            }, 1000);
+        });
+
+        /**
+         * 工具函数：格式化时间
+         */
+        function formatTime(date) {
+            return date.toLocaleTimeString('zh-CN', {
+                hour12: false,
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
+
+        /**
+         * 工具函数：显示通知
+         */
+        function showNotification(message, type = 'info') {
+            // 创建通知元素
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 20px;
+        border-radius: 5px;
+        color: white;
+        font-weight: bold;
+        z-index: 1000;
+        opacity: 0;
+        transition: opacity 0.3s;
+        ${type === 'success' ? 'background: #28a745;' :
+                type === 'error' ? 'background: #dc3545;' :
+                    'background: #17a2b8;'}
+    `;
+            notification.textContent = message;
+
+            // 添加到页面
+            document.body.appendChild(notification);
+
+            // 显示动画
+            setTimeout(() => {
+                notification.style.opacity = '1';
+            }, 100);
+
+            // 3秒后自动移除
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 3000);
+        }
+
+        // 导出函数供全局使用
+        window.generateTOTP = generateTOTP;
+        window.verifyTOTP = verifyTOTP;
+        window.refreshCode = refreshCode;
+    </script>
+</body>
+</html>
