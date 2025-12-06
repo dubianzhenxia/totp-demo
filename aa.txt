@@ -1,0 +1,25 @@
+google authenticator扫码时提示无法扫码此二维码
+Google Authenticator对TOTP URI的格式有严格的要求，特别是密钥需要是Base32编码而不是Base64编码
+
+
+## 2. 可选的算法选项
+TOTP标准支持多种HMAC算法：
+
+- HMAC-SHA1 （当前使用）- 160位哈希，最常用
+- HMAC-SHA256 - 256位哈希，更安全
+- HMAC-SHA512 - 512位哈希，最高安全级别
+## 3. 选择HMAC-SHA1的原因
+主要原因 ：
+
+1. 行业标准 ：RFC 6238 TOTP标准默认使用HMAC-SHA1
+2. 广泛兼容 ：Google Authenticator、Microsoft Authenticator等主流应用都支持
+3. 性能平衡 ：安全性足够且计算效率高
+4. 历史原因 ：HMAC-SHA1是早期TOTP/HOTP标准的选择
+
+如果需要更高安全性，可以升级到HMAC-SHA256：
+// 修改TOTP生成器配置
+this.totpGenerator = new TimeBasedOneTimePasswordGenerator(
+    Duration.ofSeconds(30), 
+    6, 
+    HmacSha256Algorithm.INSTANCE
+);
