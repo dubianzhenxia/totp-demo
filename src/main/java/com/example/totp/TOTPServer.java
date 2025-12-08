@@ -2,9 +2,9 @@ package com.example.totp;
 
 import com.example.totp.model.ApiResponse;
 import com.example.totp.model.TOTPConfig;
-import com.example.totp.service.TOTPService;
+import com.example.totp.service.CustomTOTPService;
+import com.example.totp.service.CustomQRCodeGenerator;
 import com.example.totp.util.JsonUtil;
-import com.example.totp.util.QRCodeGenerator;
 import com.sun.net.httpserver.HttpServer;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpExchange;
@@ -28,7 +28,8 @@ public class TOTPServer {
     private static final int PORT = 8080;
     
     // 服务实例
-    private final TOTPService totpService;
+    private final CustomTOTPService totpService;
+    private final CustomQRCodeGenerator qrCodeGenerator;
     
     // 当前配置（简化实现，实际应用中应该使用数据库）
     private TOTPConfig currentConfig;
@@ -37,7 +38,8 @@ public class TOTPServer {
      * 构造函数
      */
     public TOTPServer() {
-        this.totpService = new TOTPService();
+        this.totpService = new CustomTOTPService();
+        this.qrCodeGenerator = new CustomQRCodeGenerator();
         this.currentConfig = null;
     }
     
@@ -91,8 +93,14 @@ public class TOTPServer {
                 // 生成当前验证码
                 String currentCode = totpService.generateTOTP(secretKey);
                 
+                // 生成TOTP URI
+                String totpUri = String.format("otpauth://totp/%s:%s?secret=%s&issuer=%s&algorithm=%s&digits=%d&period=%d",
+                        issuer, accountName, secretKey, issuer, 
+                        totpService.getHashAlgorithm().replace("Hmac", ""),
+                        totpService.getCodeLength(), totpService.getTimeStep());
+                
                 // 生成二维码
-                String qrCodeImage = QRCodeGenerator.generateTOTPQRCode(secretKey, accountName, issuer);
+                String qrCodeImage = qrCodeGenerator.generateQRCodeBase64(totpUri);
                 
                 // 创建配置对象
                 currentConfig = new TOTPConfig(secretKey, accountName, issuer);
@@ -105,8 +113,9 @@ public class TOTPServer {
                 responseData.put("accountName", accountName);
                 responseData.put("issuer", issuer);
                 responseData.put("currentCode", currentCode);
-                responseData.put("qrCodeImage", "data:image/png;base64," + qrCodeImage);
+                responseData.put("qrCodeImage", qrCodeImage);
                 responseData.put("configInfo", currentConfig.getConfigInfo());
+                responseData.put("totpInfo", totpService.getTOTPInfo());
                 
                 // 发送成功响应
                 ApiResponse apiResponse = ApiResponse.success("TOTP配置生成成功", responseData);
@@ -156,14 +165,15 @@ public class TOTPServer {
                     return;
                 }
                 
-                // 验证验证码
-                boolean isValid = totpService.verifyTOTPWithWindow(currentConfig.getSecretKey(), userCode);
+                // 验证验证码，允许前后各1个时间窗口（即前后各30秒内有效）
+                boolean isValid = totpService.verifyTOTPWithWindow(currentConfig.getSecretKey(), userCode, 1);
                 
                 // 准备响应数据
                 Map<String, Object> responseData = new HashMap<>();
                 responseData.put("isValid", isValid);
                 responseData.put("userCode", userCode);
                 responseData.put("expectedCode", totpService.generateTOTP(currentConfig.getSecretKey()));
+                responseData.put("totpInfo", totpService.getTOTPInfo());
                 
                 // 发送响应
                 String message = isValid ? "验证码正确" : "验证码错误";

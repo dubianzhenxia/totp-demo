@@ -121,3 +121,14 @@ CREATE TABLE otp_config (    id BIGINT PRIMARY KEY,    user_id VARCHAR(64) NOT N
 用户可以选择使用哪种OTP方式
 支持多种OTP方式并存（主备方案）
 这样的设计可以轻松支持未来的OTP类型扩展，同时保持代码的整洁和可维护性。
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+1、验证码生成间隔时间 ：通过 timeStep 参数配置，默认30秒
+ 位置： `CustomTOTPService` 类的 timeStep 字段
+
+
+ 2、验证码时间窗口验证 ：通过 verifyTOTPWithWindow 方法支持
+位置： `verifyTOTPWithWindow` 方法
+
+

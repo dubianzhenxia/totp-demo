@@ -153,6 +153,14 @@ function updateConfigDisplay(configData) {
     // 显示配置信息
     document.getElementById('configInfo').textContent = configData.configInfo;
     
+    // 显示TOTP算法信息（如果存在）
+    if (configData.totpInfo) {
+        const totpInfoElement = document.getElementById('totpInfo');
+        if (totpInfoElement) {
+            totpInfoElement.textContent = configData.totpInfo;
+        }
+    }
+    
     // 显示二维码
     document.getElementById('qrCodeImage').src = configData.qrCodeImage;
     
