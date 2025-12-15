@@ -69,7 +69,8 @@ export default {
       }
     },
     
-    //按删除那个键把焦点移到前一个 
+    //按向前删除的那个键时，当前input如果不是第一个且值为空，则阻止默认事件且焦点移到前一个
+    //否则就是默认事件，把当前input的值清空
     handleKeydown(index, event) {
       if (event.key === 'Backspace' && !this.code[index] && index > 0) {
         event.preventDefault()//阻止默认事件
