@@ -81,7 +81,6 @@ public class TOTPServer {
             try {
                 // 读取请求体
                 String requestBody = readRequestBody(exchange);
-                
                 // 解析请求参数（简化处理，实际应该使用JSON解析）
                 Map<String, String> params = parseFormData(requestBody);
                 String accountName = params.getOrDefault("accountName", "Demo User");

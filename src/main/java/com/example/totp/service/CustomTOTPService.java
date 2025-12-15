@@ -81,7 +81,7 @@ public class CustomTOTPService {
     private String encodeKey(byte[] keyBytes) {
         switch (encodingAlgorithm.toLowerCase()) {
             case "base32":
-                return Base32.encode(keyBytes).replace("=", ""); // 移除填充字符
+                return Base32.encode(keyBytes);//.replace("=", ""); // 移除填充字符
             case "base64":
                 return java.util.Base64.getEncoder().encodeToString(keyBytes);
             default:
@@ -225,7 +225,7 @@ public class CustomTOTPService {
                 return true;
             }
             
-            // 检查前后时间窗口
+            // 检查前后时间窗口（包括未来时间窗口）
             for (int i = -windowSize; i <= windowSize; i++) {
                 if (i != 0) {
                     String windowCode = generateTOTPForTimeWindow(encodedKey, i);

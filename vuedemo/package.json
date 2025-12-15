@@ -1,0 +1,26 @@
+{
+  "name": "verification-code-demo",
+  "version": "1.0.0",
+  "description": "Vue2验证码输入组件示例",
+  "main": "index.js",
+  "scripts": {
+    "serve": "vue-cli-service serve",
+    "build": "vue-cli-service build",
+    "lint": "vue-cli-service lint"
+  },
+  "dependencies": {
+    "vue": "^2.6.14",
+    "vue-router": "^3.5.4"
+  },
+  "devDependencies": {
+    "@vue/cli-plugin-babel": "^4.5.19",
+    "@vue/cli-plugin-eslint": "^4.5.19",
+    "@vue/cli-service": "^4.5.19",
+    "vue-template-compiler": "^2.6.14"
+  },
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead"
+  ]
+}
