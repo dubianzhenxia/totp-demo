@@ -1,6 +1,14 @@
 <template>
   <div class="home">
-    <h1>验证码输入组件示例</h1>
+    <div class="header">
+      <h1>Vue2 组件示例</h1>
+      <div class="navigation">
+        <router-link to="/" class="nav-link active">验证码输入</router-link>
+        <router-link to="/progress-tag" class="nav-link">进度条标签</router-link>
+      </div>
+    </div>
+    
+    <h2>验证码输入组件示例</h2>
     
     <div class="demo-section">
       <h2>6位验证码示例</h2>
@@ -50,6 +58,41 @@ export default {
   max-width: 800px;
   margin: 0 auto;
   padding: 20px;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 40px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #ebeef5;
+}
+
+.header h1 {
+  color: #303133;
+  margin-bottom: 20px;
+}
+
+.navigation {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+.nav-link {
+  padding: 10px 20px;
+  text-decoration: none;
+  color: #606266;
+  border: 2px solid #dcdfe6;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.nav-link:hover,
+.nav-link.active {
+  color: #409eff;
+  border-color: #409eff;
+  background-color: #f0f9ff;
 }
 
 .demo-section {
